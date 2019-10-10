@@ -31,11 +31,11 @@ class Config(object):
         self.uid_range            =   1505257
         self.plat_form_range      =   4
         self.biz_type_range       =   6
-        self.product_id_range     =   51805   
+        self.product_id_range     =   51805
         self.cate1_id_range       =   25
         self.cate2_id_range       =   244
         self.cate3_id_range       =   1429
-        self.seller_uid_range     =   1000 
+        self.seller_uid_range     =   1000
         self.company_name_range   =   929
         self.rvcr_prov_name_range =   31
         self.rvcr_city_name_range =   370

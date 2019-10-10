@@ -1,14 +1,15 @@
 import torch
-import numpy as np
-from Preliminary_contest.config import Config
+import os
+from SeedCup_baseline.config import Config
+from SeedCup_baseline.model import My_MSE_loss
 import torch.backends.cudnn as cudnn
-from Preliminary_contest.dataloader import TrainSet, ValSet
-from Preliminary_contest.model import Network, My_MSE_loss
-from Preliminary_contest.evaluation import calculateAllMetrics
+from SeedCup_baseline.dataLoader import TrainSet, ValSet
+from SeedCup_baseline.model import Network
+from SeedCup_baseline.evaluation import calculateAllMetrics
 import datetime
 from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
-import os
+
 opt = Config()
 
 # prepare dataset
@@ -17,38 +18,28 @@ trainset = TrainSet(opt.TRAIN_FILE, opt=opt)
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=opt.TRAIN_BATCH_SIZE, shuffle=True)
 
 valset = ValSet(opt.VAL_FILE, opt=opt)
-valloader = torch.utils.data.DataLoader(valset, batch_size=opt.VAL_BATCH_SIZE, shuffle=True)
+valloader = torch.utils.data.DataLoader(valset, batch_size=opt.VAL_BATCH_SIZE, shuffle=False)
 print("==> load data successfully")
-print("==> get weight of cross entropyloss")
-weight_hour = np.zeros(shape=[24], dtype=np.float32)
-weight_day = np.zeros(shape=[20], dtype=np.float32)
-for i in tqdm(range(len(trainset))):
-    weight_hour[trainset[i][2]] += 1
-    weight_day[trainset[i][1]] += 1
-weight_hour = weight_hour / np.max(weight_hour)
-weight_day = weight_day / np.max(weight_day)
-
-net = Network(opt).cuda()
 # load model
-if os.path.exists(opt.MODEL_SAVE_PATH) and opt.USING_MODEL:
-    net = torch.load(opt.MODEL_SAVE_PATH)
-    print("==> load model successfully")
-else:
-    print("==> model file dose not exist : ", opt.MODEL_SAVE_PATH)
+# if os.path.exists(opt.MODEL_SAVE_PATH):
+#     net = torch.load(opt.MODEL_SAVE_PATH)
+#     print("==> load model successfully")
+# else:
+#     print("==> model file dose not exist : ", opt.MODEL_SAVE_PATH)
 # setup network
+net = Network(opt)
 if opt.USE_CUDA:
     print("==> using CUDA")
     net = torch.nn.DataParallel(
         net, device_ids=range(torch.cuda.device_count())).cuda()
     cudnn.benchmark = True
-
 # set criterion (loss function)
-criterion_day = My_MSE_loss(weight=torch.from_numpy(weight_day).cuda()).cuda()
-criterion_hour = torch.nn.CrossEntropyLoss(weight=torch.from_numpy(weight_hour).cuda()).cuda()
+criterion_1 = torch.nn.MSELoss()
+criterion_2 = My_MSE_loss()
 
 # you can choose metric in [accuracy, MSE, RankScore]
 highest_metrics = 100
-lower_percent = 0.98
+lower_percent = 0.975
 
 
 def train(epoch):
@@ -62,24 +53,30 @@ def train(epoch):
             targets_sign_hour = targets_sign_hour.cuda()
 
         inputs = torch.autograd.Variable(inputs)
-        targets_sign_day = torch.autograd.Variable(targets_sign_day.long())
-        targets_sign_hour = torch.autograd.Variable(targets_sign_hour.long())
+        targets_sign_day = torch.autograd.Variable(targets_sign_day.float())
+        targets_sign_hour = torch.autograd.Variable(targets_sign_hour.float())
 
         optimizer.zero_grad()
 
-        (output_hour, output_day) = net(inputs.float())
+        (output_FC_1_1, output_FC_1_2) = net(inputs.float())
 
-        output_hour = output_hour.reshape([-1, opt.OUTPUT_HOUR_SIZE])
-        output_day = output_day.reshape([-1, opt.OUTPUT_DAY_SIZE])
+        output_FC_1_1 = output_FC_1_1.reshape(-1)
 
-        loss_day = criterion_day(output_day, targets_sign_day)
-        loss_hour = criterion_hour(output_hour, targets_sign_hour)
+        output_FC_1_2 = output_FC_1_2.reshape(-1)
+
+        loss_1_1 = criterion_2(output_FC_1_1, targets_sign_day)
+
+        loss_1_2 = criterion_1(output_FC_1_2, targets_sign_hour)
+
+        loss_day = loss_1_1
+        loss_hour = loss_1_2
 
         loss = loss_day + loss_hour
         loss.backward()
 
         optimizer.step()
 
+        # TODO add to tensorboard
     print("==> epoch {}: loss_day is {}, loss_hour is {} ".format(epoch, loss_day, loss_hour))
 
 
@@ -88,24 +85,21 @@ def val(epoch):
     net.eval()
     pred_signed_time = []
     real_signed_time = []
-    for batch_idx, (inputs,payed_time, signed_time) in enumerate(tqdm(valloader)):
+    for batch_idx, (inputs, payed_time, signed_time) in enumerate(tqdm(valloader)):
         if opt.USE_CUDA:
             inputs = inputs.cuda()
 
         inputs = torch.autograd.Variable(inputs)
-        (output_hour, output_day) = net(inputs.float())
-        output_hour = output_hour.data.cpu().numpy()
-        output_day = output_day.data.cpu().numpy()
+        (output_FC_1_1, output_FC_1_2) = net(inputs.float())
+
         # calculate pred_signed_time via output
         for i in range(len(inputs)):
-            pred_time_day = np.argmax(output_day[i])
-            pred_time_hour = np.argmax(output_hour[i])
-            # set the limit of pred_time_hour
-            # if pred_time_hour < 10:
+            pred_time_day = output_FC_1_1[i]
+            pred_time_hour = output_FC_1_2[i]
+            # if output_FC_1_2[i] < 10:
             #     pred_time_hour = 10
-            # elif pred_time_hour > 19:
+            # elif output_FC_1_2[i] > 19:
             #     pred_time_hour = 19
-
             temp_payed_time = payed_time[i]
             temp_payed_time = datetime.datetime.strptime(temp_payed_time, "%Y-%m-%d %H:%M:%S")
             temp_payed_time = temp_payed_time.replace(hour=int(pred_time_hour))
@@ -114,7 +108,6 @@ def val(epoch):
             temp_pred_signed_time = temp_pred_signed_time.replace(hour=int(pred_time_hour))
             temp_pred_signed_time = temp_pred_signed_time.replace(minute=0)
             temp_pred_signed_time = temp_pred_signed_time.replace(second=0)
-            # temp_pred_signed_time.
 
             pred_signed_time.append(temp_pred_signed_time.strftime("%Y-%m-%d %H"))
             real_signed_time.append(signed_time[i])
@@ -129,7 +122,7 @@ def val(epoch):
         print("==> saving model")
         print("==> onTimePercent {} | rankScore {} ".format(onTimePercent_result, rankScore_result))
         highest_metrics = rankScore_result
-        torch.save(net, opt.MODEL_SAVE_PATH )
+        torch.save(net, opt.MODEL_SAVE_PATH)
 
 
 # start training

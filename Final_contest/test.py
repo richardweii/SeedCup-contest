@@ -1,11 +1,11 @@
 import torch
-from config import Config
-from dataLoader import TestSet
+from Final_contest.config import Config
+from Final_contest.dataloader import TestSet
 import datetime
 from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
 import os
-
+import numpy as np
 '''
 do inference on TestSet and output txt file
 '''
@@ -35,17 +35,23 @@ def get_test_result():
 
         inputs = torch.autograd.Variable(inputs)
 
-        (output_FC_1_1, output_FC_1_2) = net(inputs.float())
-        #  outputs = net(inputs.float()) # outputs.size: 800 * val_batchsize
-        
+        (output_hour, output_day) = net(inputs.float())
+        output_hour = output_hour.data.cpu().numpy()
+        output_day = output_day.data.cpu().numpy()
         # calculate pred_signed_time via output
         for i in range(len(inputs)):
+            # calculate pred_signed_time via output
+            pred_time_day = np.argmax(output_day[i])
+            pred_time_hour = np.argmax(output_hour[i])
+            # set the limit of pred_time_hour
+            # if pred_time_hour < 10:
+            #     pred_time_hour = 10
+            # elif pred_time_hour > 19:
+            #     pred_time_hour = 19
             temp_payed_time = payed_time[i]
             temp_payed_time = datetime.datetime.strptime(temp_payed_time, "%Y-%m-%d %H:%M:%S")
             # temp_pred_signed_time = temp_payed_time + relativedelta(hours = pred_time_interval)
 
-            pred_time_day = output_FC_1_1[i]
-            pred_time_hour = output_FC_1_2[i]
             temp_pred_signed_time = temp_payed_time + relativedelta(days = int(pred_time_day))
             temp_pred_signed_time = temp_pred_signed_time.replace(hour = int(pred_time_hour)%24)    
 

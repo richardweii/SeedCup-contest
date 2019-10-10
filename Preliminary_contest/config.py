@@ -27,17 +27,17 @@ class Config(object):
         self.OUTPUT_HOUR_SIZE = 24
         self.OUTPUT_DAY_SIZE = 20
 
-        self.uid_range = 1505257
+        self.uid_range = 8020516
         self.plat_form_range = 4
-        self.biz_type_range = 6
-        self.product_id_range = 51805
-        self.cate1_id_range = 25
-        self.cate2_id_range = 244
-        self.cate3_id_range = 1429
-        self.seller_uid_range = 1000
-        self.company_name_range = 929
-        self.rvcr_prov_name_range = 31
-        self.rvcr_city_name_range = 370
+        self.biz_type_range = 5
+        self.product_id_range = 141433
+        self.cate1_id_range = 26
+        self.cate2_id_range = 271
+        self.cate3_id_range = 1608
+        self.seller_uid_range = 999
+        self.company_name_range = 950
+        self.rvcr_prov_name_range = 32
+        self.rvcr_city_name_range = 434
 
         self.val_step = 1
         self.Dataset_Normorlize = False
