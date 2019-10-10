@@ -1,5 +1,5 @@
-# 2019 SeedCuptt
-### 工程结构
+# 2019 SeedCup
+### 工程结构:
 
 - `config.py` : 工程参数配置
 - `dataLoader.py` : 加载训练集及验证集
