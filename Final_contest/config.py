@@ -40,9 +40,9 @@ class Config(object):
         self.MODEL_FILE_NAME    =       'model.pkl'
         self.MODEL_SAVE_FOLDER  =       './model/'
         self.MODEL_SAVE_PATH    =       self.MODEL_SAVE_FOLDER + self.MODEL_FILE_NAME
-        self.LR = 1e-3  # default learning rate
+        self.LR = 1e-4  # default learning rate
 
-        self.EMBEDDING_DIM = 200
+        self.EMBEDDING_DIM = 100
         self.INPUT_SIZE = 11
         self.LAYER1_SIZE = 1000
         self.LAYER2_SIZE = 1000
@@ -69,7 +69,7 @@ class Config(object):
         self.mkdir()
     def get_lr(self, epoch):
 
-        if (epoch+1) % 2 == 0:
+        if (epoch+1) % 1 == 0:
             self.LR*=0.9
         print("epoch {}: learning rate {}".format(epoch, self.LR))
         return self.LR

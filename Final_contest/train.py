@@ -54,7 +54,7 @@ lower_percent = 0.98
 def train(epoch):
     net.train()
     print("train epoch:", epoch)
-    optimizer = torch.optim.Adam(net.parameters(), lr=opt.get_lr(epoch), weight_decay=1e-5)
+    optimizer = torch.optim.Adam(net.parameters(), lr=opt.get_lr(epoch), weight_decay=1e-4)
     for batch_idx, (inputs, targets_sign_day, targets_sign_hour) in enumerate(tqdm(trainloader)):
         if opt.USE_CUDA:
             inputs = inputs.cuda()

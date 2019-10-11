@@ -14,7 +14,7 @@ class My_unbalance_loss(nn.Module):
     def forward(self, output, label):
         pre_result = torch.argmax(output, dim=1)
         weight = torch.gt(pre_result, label).reshape([-1,1]).float()
-        weight = torch.add(weight, 1/49)
+        weight = torch.add(weight, 1/19)
         one_hot = torch.zeros(label.shape[0], 20).cuda()
         one_hot = one_hot.scatter(1,label.reshape([-1,1]), 1)
         output_probility = torch.nn.functional.log_softmax(output, dim=1)
