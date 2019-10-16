@@ -26,7 +26,7 @@ class My_mse_loss(nn.Module):
         super(My_mse_loss,self).__init__()
     def forward(self, output, label):
         label = label.view([-1, 1])
-        loss = torch.nn.functional.leaky_relu(output - label.float(), negative_slope=-0.5)
+        loss = torch.nn.functional.leaky_relu(output - label.float(), negative_slope=-0.333)
         return torch.sum(loss**2)
 
 class Network(nn.Module):

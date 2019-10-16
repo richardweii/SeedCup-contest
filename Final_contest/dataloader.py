@@ -66,7 +66,7 @@ class DataSet:
         self.__valset  = ValSet()
         with open(opt.TRAIN_FILE, 'r') as f:
             i_range = int(len(f.readlines()) - 1)
-            i_range = int(i_range * 0.1)
+            # i_range = int(i_range * 0.1)
         with open(opt.TRAIN_FILE, 'r') as f:
             reader = csv.reader(f)
             header_row = next(reader)[0]
