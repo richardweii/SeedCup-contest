@@ -32,21 +32,44 @@ Dataset information
 20 *dlved_time
 21 *signed_time
 '''
-
-
 class TrainSet(Dataset):
-    def __init__(self, source_file, opt=None):
+    def __init__(self):
+        self.inputs = []
+        self.targets_sign_day = []
+        self.targets_sign_hour = []
 
-        with open(source_file, 'r') as f:
-            i_range = int((len(f.readlines()) - 1) * opt.Train_Val_ratio)
-            self.len = i_range
+    def __getitem__(self, idx):
+        inputs = self.inputs[idx]
+        targets_sign_day = self.targets_sign_day[idx]
+        targets_sign_hour = self.targets_sign_hour[idx]
+        return inputs, targets_sign_day, targets_sign_hour
+    def __len__(self):
+        return len(self.inputs)
 
-        with open(source_file, 'r') as f:
+class ValSet(Dataset):
+    def __init__(self):
+        self.inputs = []
+        self.payed_time = []
+        self.signed_time = []
+
+    def __getitem__(self, idx):
+        inputs = self.inputs[idx]
+        payed_time = self.payed_time[idx]
+        signed_time = self.signed_time[idx]
+        return inputs, payed_time, signed_time
+    def __len__(self):
+        return len(self.inputs)
+
+class DataSet:
+    def __init__(self, opt=None):
+        self.__trainset = TrainSet()
+        self.__valset  = ValSet()
+        with open(opt.TRAIN_FILE, 'r') as f:
+            i_range = int(len(f.readlines()) - 1)
+            i_range = int(i_range * 0.1)
+        with open(opt.TRAIN_FILE, 'r') as f:
             reader = csv.reader(f)
             header_row = next(reader)[0]
-            self.inputs = []
-            self.targets_sign_day = []
-            self.targets_sign_hour = []
 
             for i in tqdm(range(i_range)):
                 data = next(reader)[0].split('\t')
@@ -60,7 +83,6 @@ class TrainSet(Dataset):
                 temp_input = np.array(temp_input)
 
                 # calculate time between payed_time and signed_time
-
                 try:
                     temp_payed_time = datetime.datetime.strptime(data[4], "%Y-%m-%d %H:%M:%S")
                     temp_shipped_time = datetime.datetime.strptime(data[18], "%Y-%m-%d %H:%M:%S")
@@ -78,74 +100,25 @@ class TrainSet(Dataset):
                 # remove noise
                 if time_interval_1 <= 0 or time_interval_2 <= 0 or time_interval_3 <= 0 or time_interval_4 <= 0:
                     continue
-                if time_interval_1 >= 20:
-                    continue
+                # if time_interval_1 > 20:
+                #     continue
                 temp_input = np.append(temp_payed_time.hour, temp_input)
-                self.inputs.append(temp_input)
+                if i % (opt.Train_Val_ratio + 1) == 0:
+                    self.__valset.inputs.append(temp_input)
+                    self.__valset.payed_time.append(data[4])
+                    self.__valset.signed_time.append(data[21])
+                else:
+                    self.__trainset.inputs.append(temp_input)
+                    self.__trainset.targets_sign_day.append(time_interval_1)
+                    self.__trainset.targets_sign_hour.append(temp_signed_time.hour)
 
-                self.targets_sign_day.append(time_interval_1)
-                self.targets_sign_hour.append(temp_signed_time.hour)
-        print("==> in TrainSet, len of inputs is ",len(self.inputs))
-        print("==> in TrainSet, inputs.shape  is ", np.shape(self.inputs))
+    def get_Trainset(self):
+        print("==> The shape of TrainSet is ", np.shape(self.__trainset))
+        return self.__trainset
 
-    def __getitem__(self, idx):
-        inputs = self.inputs[idx]
-        targets_sign_day = self.targets_sign_day[idx]
-        targets_sign_hour = self.targets_sign_hour[idx]
-        return inputs, targets_sign_day, targets_sign_hour
-
-    def __len__(self):
-        return len(self.inputs)
-
-
-class ValSet(Dataset):
-    def __init__(self, source_file, opt=None):
-
-        with open(source_file, 'r') as f:
-            i_range = len(f.readlines()) - 1
-            self.len = i_range
-
-        with open(source_file, 'r') as f:
-            reader = csv.reader(f)
-            header_row = next(reader)[0]
-            self.inputs = []
-            self.payed_time = []
-            self.signed_time = []
-
-            with tqdm(total=i_range - int(i_range * opt.Train_Val_ratio)) as tq:
-                for i in range(i_range):
-                    # avoid having same data with TrainSet
-                    data = next(reader)[0].split('\t')
-                    if i < int(i_range * opt.Train_Val_ratio):
-                        continue
-                    temp_input = [float(data[1]),
-                                  float(data[2]), float(data[5]),
-                                  float(data[6]), float(data[7]),
-                                  float(data[8]), float(data[10]),
-                                  float(data[11]), float(data[16]),
-                                  float(data[17])]
-                    try:
-                        temp_payed_time = datetime.datetime.strptime(data[4], "%Y-%m-%d %H:%M:%S")
-                    except Exception as e:
-                        print("[Error!]")
-                    temp_input = np.append(temp_payed_time.hour, temp_input)
-
-                    self.inputs.append(temp_input)
-                    self.payed_time.append(data[4])
-                    self.signed_time.append(data[21])
-                    tq.update(1)
-            print("==> in ValSet, len(inputs)   is ", len(self.inputs))
-            print("==> in ValSet, inputs.shape   is ", np.shape(self.inputs))
-
-    def __getitem__(self, idx):
-        inputs = self.inputs[idx]
-        payed_time = self.payed_time[idx]
-        signed_time = self.signed_time[idx]
-        return inputs, payed_time, signed_time
-
-    def __len__(self):
-        return len(self.inputs)
-
+    def get_Valset(self):
+        print("==> The shape of ValSet is ", np.shape(self.__valset))
+        return self.__valset
 
 '''
 available data fields in Testset
@@ -164,7 +137,6 @@ available data fields in Testset
 12 rvcr_prov_name	
 13 rvcr_city_name
 '''
-
 
 class TestSet(Dataset):
     def __init__(self, source_file, opt=None):

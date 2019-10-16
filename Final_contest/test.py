@@ -4,8 +4,9 @@ from Final_contest.dataloader import TestSet
 import datetime
 from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
-import os
 import numpy as np
+import os
+
 '''
 do inference on TestSet and output txt file
 '''
@@ -30,39 +31,29 @@ def get_test_result():
     net.eval()
     pred_signed_time = []
     for batch_idx, (inputs, payed_time) in enumerate(tqdm(testloader)):
-        if opt.USE_CUDA:
-            inputs = inputs.cuda()
-
-        inputs = torch.autograd.Variable(inputs)
+        # if opt.USE_CUDA:
+        #     inputs = inputs.cuda()
 
         (output_hour, output_day) = net(inputs.float())
         output_hour = output_hour.data.cpu().numpy()
-        output_day = output_day.data.cpu().numpy()
+        # transform output_day into integer
+        output_day = np.floor(output_day.data.cpu().numpy() + 1 - opt.Threshold)
         # calculate pred_signed_time via output
         for i in range(len(inputs)):
             # calculate pred_signed_time via output
-            pred_time_day = np.argmax(output_day[i])
             pred_time_hour = np.argmax(output_hour[i])
-            # set the limit of pred_time_hour
-            # if pred_time_hour < 10:
-            #     pred_time_hour = 10
-            # elif pred_time_hour > 19:
-            #     pred_time_hour = 19
+            pred_time_day = np.argmax(output_day[i]) + 1
+
             temp_payed_time = payed_time[i]
             temp_payed_time = datetime.datetime.strptime(temp_payed_time, "%Y-%m-%d %H:%M:%S")
-            # temp_pred_signed_time = temp_payed_time + relativedelta(hours = pred_time_interval)
-
             temp_pred_signed_time = temp_payed_time + relativedelta(days = int(pred_time_day))
-            temp_pred_signed_time = temp_pred_signed_time.replace(hour = int(pred_time_hour)%24)    
-
-            # temp_pred_signed_time = temp_payed_time + relativedelta(hours = pred_time_interval)
+            temp_pred_signed_time = temp_pred_signed_time.replace(hour = int(pred_time_hour))
             pred_signed_time.append(temp_pred_signed_time.strftime('%Y-%m-%d %H'))
 
     # save predict result to txt file
     with open(opt.TEST_OUTPUT_PATH, 'w') as f:
         for res in pred_signed_time:
             f.write(res + "\n")
-
 
 if __name__=='__main__':
     get_test_result()

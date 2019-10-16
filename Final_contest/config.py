@@ -30,7 +30,7 @@ class Config(object):
         self.USING_MODEL = True
         self.TRAIN_BATCH_SIZE = 256
         self.VAL_BATCH_SIZE = 1024
-        self.TEST_BATCH_SIZE = 128
+        self.TEST_BATCH_SIZE = 256
         self.TRAIN_FILE         =       './data/SeedCup_final_train.csv'
         self.VAL_FILE           =       './data/SeedCup_final_train.csv'
         self.TEST_FILE          =       './data/SeedCup_final_test.csv'
@@ -40,15 +40,16 @@ class Config(object):
         self.MODEL_FILE_NAME    =       'model.pkl'
         self.MODEL_SAVE_FOLDER  =       './model/'
         self.MODEL_SAVE_PATH    =       self.MODEL_SAVE_FOLDER + self.MODEL_FILE_NAME
-        self.LR = 1e-4  # default learning rate
+        self.LR = 1e-4 # default learning rate
 
         self.EMBEDDING_DIM = 100
         self.INPUT_SIZE = 11
-        self.LAYER1_SIZE = 1000
-        self.LAYER2_SIZE = 1000
-        self.LAYER3_SIZE = 1000
+        self.LAYER1_SIZE = 500
+        self.LAYER2_SIZE = 500
+        self.LAYER3_SIZE = 500
+
         self.OUTPUT_HOUR_SIZE = 24
-        self.OUTPUT_DAY_SIZE = 20
+        self.OUTPUT_DAY_SIZE = 1
 
         self.uid_range = 8020517
         self.plat_form_range = 5
@@ -64,13 +65,13 @@ class Config(object):
 
         self.val_step = 1
         self.Dataset_Normorlize = False
-        self.Train_Val_ratio = 0.9
-
+        self.Train_Val_ratio = 9
+        self.Threshold = 0.5
         self.mkdir()
     def get_lr(self, epoch):
 
-        if (epoch+1) % 1 == 0:
-            self.LR*=0.9
+        if epoch != 0:
+            self.LR*=0.95
         print("epoch {}: learning rate {}".format(epoch, self.LR))
         return self.LR
     def mkdir(self):

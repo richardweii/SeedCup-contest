@@ -7,19 +7,27 @@ import torch
 '''
 design loss function
 '''
-class My_unbalance_loss(nn.Module):
+class My_unbalance_loss1(nn.Module):
     def __init__(self, weight):
-        super(My_unbalance_loss,self).__init__()
-        self.weight = weight.reshape([1,-1])
+        super(My_unbalance_loss1,self).__init__()
+        self.weight = weight
     def forward(self, output, label):
         pre_result = torch.argmax(output, dim=1)
-        weight = torch.gt(pre_result, label).reshape([-1,1]).float()
-        weight = torch.add(weight, 1/19)
+        weight = torch.gt(pre_result, label).view([-1,1]).float()
+        weight = torch.add(weight, 1/49)
         one_hot = torch.zeros(label.shape[0], 20).cuda()
-        one_hot = one_hot.scatter(1,label.reshape([-1,1]), 1)
+        one_hot = one_hot.scatter(1,label.view([-1,1]), 1)
         output_probility = torch.nn.functional.log_softmax(output, dim=1)
         cross_entropy = -one_hot * output_probility * weight * self.weight
         return torch.sum(cross_entropy)
+
+class My_mse_loss(nn.Module):
+    def __init__(self):
+        super(My_mse_loss,self).__init__()
+    def forward(self, output, label):
+        label = label.view([-1, 1])
+        loss = torch.nn.functional.leaky_relu(output - label.float(), negative_slope=-0.5)
+        return torch.sum(loss**2)
 
 class Network(nn.Module):
     def __init__(self, opt):
@@ -42,36 +50,36 @@ class Network(nn.Module):
             #  TODO change input dimension
             nn.Linear(opt.INPUT_SIZE* opt.EMBEDDING_DIM, opt.LAYER1_SIZE),
             nn.BatchNorm1d(opt.LAYER1_SIZE),
-            nn.Sigmoid(),
+            nn.ReLU(inplace=True),
             nn.Dropout(0.5),
 
             nn.Linear(opt.LAYER1_SIZE, opt.LAYER2_SIZE),
             nn.BatchNorm1d(opt.LAYER2_SIZE),
-            nn.Sigmoid(),
+            nn.ReLU(inplace=True),
             nn.Dropout(0.5),
 
             nn.Linear(opt.LAYER2_SIZE, opt.LAYER3_SIZE),
             nn.BatchNorm1d(opt.LAYER3_SIZE),
-            nn.Sigmoid(),
+            nn.ReLU(inplace=True),
             nn.Dropout(0.5),
 
-            nn.Linear(opt.LAYER3_SIZE, opt.OUTPUT_HOUR_SIZE)
+            nn.Linear(opt.LAYER3_SIZE, opt.OUTPUT_HOUR_SIZE),
         )
         self.full_conection_layer_day = nn.Sequential(
             #  TODO change input dimension
             nn.Linear(opt.INPUT_SIZE* opt.EMBEDDING_DIM, opt.LAYER1_SIZE),
             nn.BatchNorm1d(opt.LAYER1_SIZE),
-            nn.Sigmoid(),
+            nn.ReLU(inplace=True),
             nn.Dropout(0.5),
 
             nn.Linear(opt.LAYER1_SIZE, opt.LAYER2_SIZE),
             nn.BatchNorm1d(opt.LAYER2_SIZE),
-            nn.Sigmoid(),
+            nn.ReLU(inplace=True),
             nn.Dropout(0.5),
 
             nn.Linear(opt.LAYER2_SIZE, opt.LAYER3_SIZE),
             nn.BatchNorm1d(opt.LAYER3_SIZE),
-            nn.Sigmoid(),
+            nn.ReLU(inplace=True),
             nn.Dropout(0.5),
 
             nn.Linear(opt.LAYER3_SIZE, opt.OUTPUT_DAY_SIZE),
